@@ -114,19 +114,19 @@ Volumetrics <- rbind(Volumetrics12, Volumetrics14)
 MasterList <- Clinical %>%
   left_join(UrineNormalizers, by = c("Code", "VisitNumber")) %>%
   left_join(NeuroPsych, by = c("Code", "VisitNumber")) %>%
-  left_join(Volumetrics, by = c("Code", "VisitNumber")) %>%
   #change names specifically so that they don't match names of columns of Clinical or any other Df
   #this causes problems later when you join and there are duplicate column names
-  select(Code, VisitNumber, EstimatedClassification_ = EstimatedClassification, CsfAb42_Zlokovic = `CSF A_42 (pg/mL) (MSD 6E10) (Zlokovic lab)`,
-         CsfTau_Zlokovic = `CSF Total tau (pg/mL) (MSD) (Zlokovic lab)`,
-         AbAbby = `B Amyloid Level pg/ml (Abby)`, TauAbby = `Total Tau Level pg/ml (Abby)`,
-         ClinicalDx = `Clinical Dx`, Sex_ = Sex, Age_ = `Age at Sample`, Education_ = Education,
-         BMI_ = BMI, Hypertension_ = Hypertension, TBI_ = `Traumatic Brain Injury`,
-         Other_Medical_Conditions_ = `Other Medical Conditions`, ApoE_ = ApoE, MedsAndSupplements = `Meds and Supplements`,
-         StroopRaw = `STROOP INTERFERENCE RAW`, StroopZ = `STROOP INTERFERENCE Z-SCORE`,
-         ChangeInCranialVol = ChangeInIntraCranialVolume, ChangeInGrayVol = ChangeInGrayMatterVolume) %>%
+  select(Code, VisitNumber,
+         EstimatedClassification, `CSF A_42 (pg/mL) (MSD 6E10) (Zlokovic lab)`, `CSF Total tau (pg/mL) (MSD) (Zlokovic lab)`,
+         `B Amyloid Level pg/ml (Abby)`, `Total Tau Level pg/ml (Abby)`,
+         `Clinical Dx`, Sex, `Age at Sample`, Education, BMI, Hypertension, `Traumatic Brain Injury`,
+         `Other Medical Conditions`, ApoE, `Meds and Supplements`,
+         `STROOP INTERFERENCE RAW`, `STROOP INTERFERENCE Z-SCORE`,
+         `Creatinine Adjusted Final Con. (ug/mL)`, `Total Protein  (TPA) ug/ml`, `Albumin (ug/mL)`,
+         `UACR (mg/g) ALB/CRN`) %>%
+  
   mutate(VisitNumber = factor(VisitNumber)) %>%
-  mutate(EstimatedClassification_ = factor(EstimatedClassification_)) %>%
+  mutate(EstimatedClassification = factor(EstimatedClassification)) %>%
   mutate(ClinicalDx = factor(ClinicalDx)) %>%
   mutate(Sex_ = factor(Sex_)) %>%
   mutate(Education_ = factor(Education_)) %>%
@@ -146,6 +146,19 @@ MasterList <- Clinical %>%
                          breaks = quantile(Age_, na.rm = TRUE),
                          labels = c("Q1", "Q2", "Q3", "Q4"),
                          include.lowest = TRUE))
+
+Clinical <- Clinical %>%
+  select(-EstimatedClassification, -`CSF A_42 (pg/mL) (MSD 6E10) (Zlokovic lab)`, -`CSF Total tau (pg/mL) (MSD) (Zlokovic lab)`,
+         -`B Amyloid Level pg/ml (Abby)`, -`Total Tau Level pg/ml (Abby)`,
+         -`Clinical Dx`, -Sex, -`Age at Sample`, -Education, -BMI, -Hypertension, -`Traumatic Brain Injury`,
+         -`Other Medical Conditions`, -ApoE, -`Meds and Supplements`)
+
+UrineNormalizers <- UrineNormalizers %>%
+  select(-`Creatinine Adjusted Final Con. (ug/mL)`, -`Total Protein  (TPA) ug/ml`, -`Albumin (ug/mL)`,
+         -`UACR (mg/g) ALB/CRN`)
+
+NeuroPsych <- NeuroPsych %>%
+  select(-`STROOP INTERFERENCE RAW`, -`STROOP INTERFERENCE Z-SCORE`)
 
 #
 UrineFfa <- read_csv("~/Alzheimers/data/UrineFfa.csv", 
@@ -258,18 +271,32 @@ ClinicalWv <- Clinical
 names(ClinicalWv) <- make.names(names(ClinicalWv))
 NeuroPsychWv <- NeuroPsych
 names(NeuroPsychWv) <- make.names(names(NeuroPsychWv))
+Volumetrics <- Volumetrics
+names(Volumetrics) <- make.names(names(Volumetrics))
+MasterList <- MasterList
+names(MasterList) <- make.names(names(MasterList))
+
 UrineFfaWv <- inner_join(UrineNormalizers, UrineFfa)
 names(UrineFfaWv) <- make.names(names(UrineFfaWv))
 UrineDcaWv <- inner_join(UrineNormalizers, UrineDca)
 names(UrineDcaWv) <- make.names(names(UrineDcaWv))
 UrineTfaWv <- inner_join(UrineNormalizers, UrineTfa)
 names(UrineTfaWv) <- make.names(names(UrineTfaWv))
+
 CsfFfaWv <- CsfFfa
 names(CsfFfaWv) <- make.names(names(CsfFfaWv))
-CsfTfaWv <- CsfTfa
-names(CsfTfaWv) <- make.names(names(CsfTfaWv))
-Volumetrics <- Volumetrics
-names(Volumetrics) <- make.names(names(Volumetrics))
+CsfFfaPercentWv <- CsfFfaPercent
+names(CsfFfaPercentWv) <- make.names(names(CsfFfaPercentWv))
+
+CsfSfWv <- CsfSf
+names(CsfFfaWv) <- make.names(names(CsfSfWv))
+CsfSfPercentWv <- CsfSfPercent
+names(CsfSfPercentWv) <- make.names(names(CsfSfPercentWv))
+
+CsfNpWv <- CsfNp
+names(CsfNpWv) <- make.names(names(CsfNpWv))
+CsfNpPercentWv <- CsfNpPercent
+names(CsfNpPercentWv) <- make.names(names(CsfNpPercentWv))
 
 save(General, ClinicalWv, NeuroPsychWv, UrineFfaWv,
      UrineDcaWv, UrineTfaWv, CsfFfaWv, CsfTfaWv, Volumetrics,
