@@ -85,8 +85,8 @@ Cont14 <- Cont14 %>% mutate(Code = as.integer(Code), VisitNumber = 2L)
 
 #shouldn't do the full join causes naming problems
 Volumetrics12 <- LhVolume12 %>%
-  full_join(RhVolume12, by = c("Code", "VisitNumber")) %>%
-  full_join(Cont12, by = c("Code", "VisitNumber")) %>%
+  full_join(RhVolume12) %>%
+  full_join(Cont12) %>%
   #remove the following patients see Mike's email from 2.23.17
   filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295)))
 
@@ -127,23 +127,23 @@ MasterList <- Clinical %>%
   
   mutate(VisitNumber = factor(VisitNumber)) %>%
   mutate(EstimatedClassification = factor(EstimatedClassification)) %>%
-  mutate(ClinicalDx = factor(ClinicalDx)) %>%
-  mutate(Sex_ = factor(Sex_)) %>%
-  mutate(Education_ = factor(Education_)) %>%
-  mutate(ApoE_ = factor(ApoE_)) %>%
-  mutate(Hypertension_ = as.logical(Hypertension_)) %>%
-  separate(BMI_, c("BmiClassification", "BmiNumber"), sep = "=") %>%
+  mutate(`Clinical Dx` = factor(`Clinical Dx`)) %>%
+  mutate(Sex = factor(Sex)) %>%
+  mutate(Education = factor(Education)) %>%
+  mutate(ApoE = factor(ApoE)) %>%
+  mutate(Hypertension = as.logical(Hypertension)) %>%
+  separate(BMI, c("BmiClassification", "BmiNumber"), sep = "=") %>%
   mutate(BmiClassification = factor(BmiClassification)) %>%
-  mutate(AbLevels = cut(AbAbby,
-                        breaks = quantile(AbAbby, na.rm = TRUE),
+  mutate(`B Amyloid Level pg/ml (Abby)` = cut(`B Amyloid Level pg/ml (Abby)`,
+                        breaks = quantile(`B Amyloid Level pg/ml (Abby)`, na.rm = TRUE),
                         labels = c("Q1", "Q2", "Q3", "Q4"),
                         include.lowest = TRUE)) %>%
-  mutate(TauLevels = cut(TauAbby,
-                        breaks = quantile(TauAbby, na.rm = TRUE),
+  mutate(`Total Tau Level pg/ml (Abby)` = cut(`Total Tau Level pg/ml (Abby)`,
+                        breaks = quantile(`Total Tau Level pg/ml (Abby)`, na.rm = TRUE),
                         labels = c("Q1", "Q2", "Q3", "Q4"),
                         include.lowest = TRUE)) %>%
-  mutate(AgeLevels = cut(Age_,
-                         breaks = quantile(Age_, na.rm = TRUE),
+  mutate(AgeLevels = cut(`Age at Sample`,
+                         breaks = quantile(`Age at Sample`, na.rm = TRUE),
                          labels = c("Q1", "Q2", "Q3", "Q4"),
                          include.lowest = TRUE))
 
@@ -271,10 +271,10 @@ ClinicalWv <- Clinical
 names(ClinicalWv) <- make.names(names(ClinicalWv))
 NeuroPsychWv <- NeuroPsych
 names(NeuroPsychWv) <- make.names(names(NeuroPsychWv))
-Volumetrics <- Volumetrics
-names(Volumetrics) <- make.names(names(Volumetrics))
-MasterList <- MasterList
-names(MasterList) <- make.names(names(MasterList))
+VolumetricsWv <- Volumetrics
+names(VolumetricsWv) <- make.names(names(VolumetricsWv))
+MasterListWv <- MasterList
+names(MasterListWv) <- make.names(names(MasterListWv))
 
 UrineFfaWv <- inner_join(UrineNormalizers, UrineFfa)
 names(UrineFfaWv) <- make.names(names(UrineFfaWv))
@@ -289,7 +289,7 @@ CsfFfaPercentWv <- CsfFfaPercent
 names(CsfFfaPercentWv) <- make.names(names(CsfFfaPercentWv))
 
 CsfSfWv <- CsfSf
-names(CsfFfaWv) <- make.names(names(CsfSfWv))
+names(CsfSfWv) <- make.names(names(CsfSfWv))
 CsfSfPercentWv <- CsfSfPercent
 names(CsfSfPercentWv) <- make.names(names(CsfSfPercentWv))
 
@@ -298,6 +298,9 @@ names(CsfNpWv) <- make.names(names(CsfNpWv))
 CsfNpPercentWv <- CsfNpPercent
 names(CsfNpPercentWv) <- make.names(names(CsfNpPercentWv))
 
-save(General, ClinicalWv, NeuroPsychWv, UrineFfaWv,
-     UrineDcaWv, UrineTfaWv, CsfFfaWv, CsfTfaWv, Volumetrics,
+save(ClinicalWv, NeuroPsychWv, VolumetricsWv, MasterListWv,
+     UrineFfaWv, UrineDcaWv, UrineTfaWv,
+     CsfFfaWv, CsfFfaPercentWv,
+     CsfSfWv, CsfSfPercentWv,
+     CsfNpWv, CsfNpPercentWv,
      file = "data/WhizViz.Rdata")
