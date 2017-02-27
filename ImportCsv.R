@@ -2,12 +2,14 @@ library(readr)
 library(tidyr)
 library(dplyr)
 library(boot)
+library(lubridate)
 
 #
 Clinical <- read_csv("~/Alzheimers/data/Clinical.csv")
 names(Clinical)[1] <- "HMRI"
 Clinical <- Clinical %>%
   separate(HMRI, c("Code", "VisitNumber"), sep = "-")  %>%
+  mutate_at(vars(Code, VisitNumber), as.integer) %>% 
   #lm(log(`B Amyloid Level pg/ml (Abby)`)~log(`CSF A_42 (pg/mL) (MSD 6E10) (Zlokovic lab)`), data = General)
   #lm(log(`Total Tau Level pg/ml (Abby)`)~log(`CSF Total tau (pg/mL) (MSD) (Zlokovic lab)`), data = General)
   mutate(EstimatedAbAbby = exp(log(`CSF A_42 (pg/mL) (MSD 6E10) (Zlokovic lab)`)*0.7482+2.5525)) %>%
@@ -18,62 +20,101 @@ Clinical <- Clinical %>%
   mutate(EstimatedPat = ifelse(EstimatedPat, "PAT", "NAT")) %>%
   mutate(EstimatedPat = as.factor(EstimatedPat)) %>%
   mutate(EstimatedClassification = paste(`Clinical Dx`,EstimatedPat)) %>%
-  mutate(EstimatedClassification = factor(EstimatedClassification))
+  mutate(EstimatedClassification = factor(EstimatedClassification)) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295)))
 
 #
 NeuroPsych <- read_csv("~/Alzheimers/data/NeuroPsych.csv")
 names(NeuroPsych)[1] <- "ID"
 NeuroPsych <- NeuroPsych %>%
-  separate(ID, c("Code", "VisitNumber"), sep = "-")
+  separate(ID, c("Code", "VisitNumber"), sep = "-") %>%
+  mutate_at(vars(Code, VisitNumber), as.integer) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295)))
+
+#ensure there are no patients who aren't in the clinical df
+select(NeuroPsych, Code, VisitNumber) %>% anti_join(select(Clinical, Code))
 
 #
 UrineNormalizers <- read_csv("~/Alzheimers/data/UrineNormalizers.csv")
 names(UrineNormalizers)[1:2] <- c("Classification", "HMRI")
 UrineNormalizers <- UrineNormalizers[2:nrow(UrineNormalizers),]
 UrineNormalizers <- UrineNormalizers %>%
-  separate(HMRI, c("Code", "VisitNumber"), sep = "-")
+  separate(HMRI, c("Code", "VisitNumber"), sep = "-") %>%
+  mutate_at(vars(Code, VisitNumber), as.integer) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295)))
+
+select(UrineNormalizers, Code, VisitNumber) %>% anti_join(select(Clinical, Code))
 
 #
+#label all 12 as 
 LhVolume12 <- read_csv("~/Alzheimers/data/Volumetrics/LhVolume12.csv")
-names(LhVolume12) <- paste(names(LhVolume12), "2010-2012")
-names(LhVolume12)[1] <- "HMRI"
-
-LhVolume14 <- read_csv("~/Alzheimers/data/Volumetrics/LhVolume14.csv")
-names(LhVolume14) <- paste(names(LhVolume14), "2014-2016")
-names(LhVolume14)[1] <- "HMRI"
+#names(LhVolume12) <- paste(names(LhVolume12), "2010-2012")
+names(LhVolume12)[1] <- "Code"
+LhVolume12 <- LhVolume12 %>% mutate(Code = as.integer(Code), VisitNumber = 1L)
 
 RhVolume12 <- read_csv("~/Alzheimers/data/Volumetrics/RhVolume12.csv")
-names(RhVolume12) <- paste(names(RhVolume12), "2010-2012")
-names(RhVolume12)[1] <- "HMRI"
-
-RhVolume14 <- read_csv("~/Alzheimers/data/Volumetrics/RhVolume14.csv")
-names(RhVolume14) <- paste(names(RhVolume14), "2014-2016")
-names(RhVolume14)[1] <- "HMRI"
+names(RhVolume12)[1] <- "Code"
+RhVolume12 <- RhVolume12 %>% mutate(Code = as.integer(Code), VisitNumber = 1L)
 
 Cont12 <- read_csv("~/Alzheimers/data/Volumetrics/Cont12.csv")
-names(Cont12) <- paste(names(Cont12), "2010-2012")
-names(Cont12)[1] <- "HMRI"
+names(Cont12)[1] <- "Code"
+Cont12 <- Cont12 %>% mutate(Code = as.integer(Code), VisitNumber = 1L) %>%
+  #classification is included in cont12 but not cont14 and is therefore being removed so they can be binded
+  select(-Classification)
+
+#random code to compare date fluids taken to date MRI was taken  
+# select(Clinical, Code, VisitNumber, contains("date")) %>%
+#   right_join(select(LhVolume12, Code, `MRI Date 2010-2012`)) %>%
+#   mutate_at(vars(`Date of Fluids`, `MRI Date 2010-2012`), mdy) %>%
+#   mutate(DaysBetweenFluidsAndMri = `MRI Date 2010-2012` - `Date of Fluids`) %>% ggplot() + geom_histogram(aes(DaysBetweenFluidsAndMri))
+
+LhVolume14 <- read_csv("~/Alzheimers/data/Volumetrics/LhVolume14.csv")
+names(LhVolume14)[1] <- "Code"
+LhVolume14 <- LhVolume14 %>% mutate(Code = as.integer(Code), VisitNumber = 2L)
+
+RhVolume14 <- read_csv("~/Alzheimers/data/Volumetrics/RhVolume14.csv")
+names(RhVolume14)[1] <- "Code"
+RhVolume14 <- RhVolume14 %>% mutate(Code = as.integer(Code), VisitNumber = 2L)
 
 Cont14 <- read_csv("~/Alzheimers/data/Volumetrics/Cont14.csv")
-names(Cont14) <- paste(names(Cont14), "2014-2016")
-names(Cont14)[1] <- "HMRI"
+names(Cont14)[1] <- "Code"
+Cont14 <- Cont14 %>% mutate(Code = as.integer(Code), VisitNumber = 2L)
 
-Volumetrics <- LhVolume12 %>%
-  full_join(RhVolume12) %>%
-  full_join(Cont12) %>%
-  full_join(LhVolume14) %>%
+#shouldn't do the full join causes naming problems
+Volumetrics12 <- LhVolume12 %>%
+  full_join(RhVolume12, by = c("Code", "VisitNumber")) %>%
+  full_join(Cont12, by = c("Code", "VisitNumber")) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295)))
+
+Volumetrics14 <- LhVolume14 %>%
   full_join(RhVolume14) %>%
   full_join(Cont14) %>%
-  mutate(ChangeInIntraCranialVolume = `IntraCranialVol 2010-2012` - `IntraCranialVol 2014-2016`) %>%
-  mutate(ChangeInGrayMatterVolume = `TotalGrayVol 2014-2016` - `TotalGrayVol 2010-2012`) %>%
-  mutate(Code = as.character(HMRI))
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295)))
+
+Volumetrics <- rbind(Volumetrics12, Volumetrics14)
+
+#anti- join to make sure there are no people with volumetrics who aren't in the Master list
+#select(Volumetrics, Code, VisitNumber) %>% anti_join(select(Clinical, Code, VisitNumber))
+
+#WhizViz will join a df of X-axis variables and a df Y-axis variables to the master frame.
+#master frame contains meta information such as Age and Dx that are important for coloring
+#and faceting, and also for examining the hover textbox.
+#Meta informtion includes info from Clinical, UrineNormalizers, Neuropsych, and Volumetrics.
+#Meta information selected from those dataframes for the Master frame should subsequently be
+#removed from that original frame, because otherwise when Whizviz rejoins that frame to Master
+#there will be an annoying naming conflict.
 
 #we have to get Dx from UrineNormalizers, because the Dx from CLinical does
 #not include the PAT and NAT specification
-General <- Clinical %>%
+MasterList <- Clinical %>%
   left_join(UrineNormalizers, by = c("Code", "VisitNumber")) %>%
   left_join(NeuroPsych, by = c("Code", "VisitNumber")) %>%
-  left_join(Volumetrics, by = c("Code")) %>%
+  left_join(Volumetrics, by = c("Code", "VisitNumber")) %>%
   #change names specifically so that they don't match names of columns of Clinical or any other Df
   #this causes problems later when you join and there are duplicate column names
   select(Code, VisitNumber, EstimatedClassification_ = EstimatedClassification, CsfAb42_Zlokovic = `CSF A_42 (pg/mL) (MSD 6E10) (Zlokovic lab)`,
@@ -114,43 +155,101 @@ UrineFfa <- read_csv("~/Alzheimers/data/UrineFfa.csv",
                                    `C20:4 (ng/mL)` = col_double(), `C22:5 (ng/mL)` = col_double(), 
                                    `DHA/AA` = col_double(), `EPA/AA` = col_double())) %>%
   filter(!is.na(Code)) %>%
-  separate(Code, c("Code", "VisitNumber"), sep = "-")
+  separate(Code, c("Code", "VisitNumber"), sep = "-") %>%
+  mutate_at(vars(Code, VisitNumber), as.integer) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295)))
+
+select(UrineFfa, Code, VisitNumber) %>% anti_join(select(Clinical, Code))
 
 #
 UrineDca <- read_csv("~/Alzheimers/data/UrineDca.csv")
 names(UrineDca)[1:2] <- c("Dx", "HMRI")
-UrineDca <- UrineDca[2:nrow(UrineDca),]
 UrineDca <- UrineDca %>%
-  separate(HMRI, c("Code", "VisitNumber"), sep = "-")
+  select(-Dx, -X11, -X12, -X13, -X14, -X15, -X16) %>%
+  separate(HMRI, c("Code", "VisitNumber"), sep = "-") %>%
+  mutate_at(vars(Code, VisitNumber), as.integer) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295)))
+
+select(UrineDca, Code, VisitNumber) %>% anti_join(select(Clinical, Code))
 
 #
 UrineTfa <- read_csv("~/Alzheimers/data/UrineTfa.csv")
 names(UrineTfa)[1] <- c("HMRI")
 UrineTfa <- UrineTfa %>%  
-  separate(HMRI, c("Code", "VisitNumber"), sep = "-")
+  separate(HMRI, c("Code", "VisitNumber"), sep = "-")  %>%
+  mutate_at(vars(Code, VisitNumber), as.integer) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295)))
+
+select(UrineTfa, Code, VisitNumber) %>% anti_join(select(Clinical, Code))
 
 #
-CsfFfa <- read_csv("~/Alzheimers/data/CsfFfa.csv", 
-                   col_types = cols(`C10:0 (ng/mL)` = col_double(), 
-                                    `CSF Volume used for S3 prep (mL)` = col_double(), 
-                                    `DPA/EPA (ng/mL)` = col_double(), 
-                                    `O-MUFA (ng/mL)` = col_double(), 
-                                    `TPC S3 (ng/mL)` = col_double(), 
-                                    `TPCn S3 (μg/mL)` = col_double()))
-CsfFfa <- CsfFfa[2:nrow(CsfFfa),] %>%  
-  separate(HmriID, c("Code", "VisitNumber"), sep = "-")
+CsfFfa <- read_csv("~/Alzheimers/data/CsfFfa.csv")
+names(CsfFfa)[1] <- c("HMRI")
+CsfFfa <- CsfFfa %>%
+  separate(HMRI, c("Code", "VisitNumber"), sep = "-")  %>%
+  mutate_at(vars(Code, VisitNumber), as.integer) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295))) %>%
+  #remove this column for now since it has divide by zero entries. mention to Alfred.
+  select(-`DPA/EPA`)
+
+select(CsfFfa, Code, VisitNumber) %>% anti_join(select(Clinical, Code))
 
 #
-CsfTfa <- read_csv("~/Alzheimers/data/CsfTfa.csv", 
-                   col_types = cols(`C10:0 (ng/mL)` = col_double(), 
-                                    `CSF Volume used for S3 prep (mL)` = col_double(), 
-                                    Dx = col_character(), HmriID = col_character(), 
-                                    `TPC S3 (ng/mL)` = col_double(), 
-                                    `TPCn S3 (μg/mL)` = col_double()))
-CsfTfa <- CsfTfa[2:nrow(CsfTfa),] %>%  
-  separate(HmriID, c("Code", "VisitNumber"), sep = "-")
+CsfFfaPercent <- read_csv("~/Alzheimers/data/CsfFfaPercent.csv")
+names(CsfFfaPercent)[1] <- c("HMRI")
+CsfFfaPercent <- CsfFfaPercent %>%
+  separate(HMRI, c("Code", "VisitNumber"), sep = "-")  %>%
+  mutate_at(vars(Code, VisitNumber), as.integer) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295))) %>%
+  #remove this column for now since it has divide by zero entries. mention to Alfred.
+  select(-`DPA/EPA`)
 
+#
+CsfSf <- read_csv("~/Alzheimers/data/CsfSf.csv")
+names(CsfSf)[1] <- c("HMRI")
+CsfSf <- CsfSf %>%
+  separate(HMRI, c("Code", "VisitNumber"), sep = "-")  %>%
+  mutate_at(vars(Code, VisitNumber), as.integer) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295))) %>%
+  #remove this column for now since it has divide by zero entries. mention to Alfred.
+  select(-`DPA/EPA`)
 
+#
+CsfSfPercent <- read_csv("~/Alzheimers/data/CsfSfPercent.csv")
+names(CsfSfPercent)[1] <- c("HMRI")
+CsfSfPercent <- CsfSfPercent %>%
+  separate(HMRI, c("Code", "VisitNumber"), sep = "-")  %>%
+  mutate_at(vars(Code, VisitNumber), as.integer) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295))) %>%
+  #remove this column for now since it has divide by zero entries. mention to Alfred.
+  select(-`N-3/N-6`)
+
+#
+CsfNp <- read_csv("~/Alzheimers/data/CsfNp.csv")
+names(CsfNp)[1] <- c("HMRI")
+CsfNp <- CsfNp %>%
+  separate(HMRI, c("Code", "VisitNumber"), sep = "-")  %>%
+  mutate_at(vars(Code, VisitNumber), as.integer) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295))) %>%
+  #remove this column for now since it has divide by zero entries. mention to Alfred.
+  select(-`AA/DGLA`, -`SDA/ALA`)
+
+#
+CsfNpPercent <- read_csv("~/Alzheimers/data/CsfNpPercent.csv")
+names(CsfNpPercent)[1] <- c("HMRI")
+CsfNpPercent <- CsfNpPercent %>%
+  separate(HMRI, c("Code", "VisitNumber"), sep = "-")  %>%
+  mutate_at(vars(Code, VisitNumber), as.integer) %>%
+  #remove the following patients see Mike's email from 2.23.17
+  filter(!(Code %in% c(1411, 1348, 1345, 1321, 1316, 1295)))
 
 #for WhizViz we only want numeric or integer Columns
 #we have to use purrr package, bc as of 2/6/17 there
