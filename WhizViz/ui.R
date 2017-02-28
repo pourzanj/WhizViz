@@ -38,13 +38,16 @@ shinyUI(fluidPage(
       
       uiOutput("yvar"),
       
-      verbatimTextOutput("numMissing"),
-      
       checkboxGroupInput("axesscale", "Axes Scale:", choices = c("X Log Scale" = "x",
                                                                 "Y Log Scale" = "y")),
       
       checkboxGroupInput("regression", "Regression Fit:", choices = c("Linear" = "lin",
                                                                  "Smoother" = "smooth")),
+      
+      #########################
+      h2("Missing and Regression"),
+      verbatimTextOutput("numMissing"),
+      verbatimTextOutput("regressionResults"),
       
       #########################
       h2("Filters"),

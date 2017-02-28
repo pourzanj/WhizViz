@@ -77,8 +77,10 @@ shinyServer(function(input, output) {
                 sum(is.na(df[, input$xvarSelected]) | is.na(df[, input$yvarSelected]))))
   })
   
-  # renderPlotly() also understands ggplot2 objects!
-  output$plot <- renderPlotly({
+  #######################
+  #CREATE DATA FRAME
+  #######################
+  joinDataFrames <- reactive({
     DfNameX <- parse(text = input$xtype)
     DfNameY <- parse(text = input$ytype)
     
@@ -88,7 +90,15 @@ shinyServer(function(input, output) {
     if(input$xtype != input$ytype) df <- df %>% left_join(eval(DfNameY), by = c("Code", "VisitNumber"))
     
     #to apply VisitNumber filter we have to convert VisitNumber from int to factor
+    #this must be done after we join because the join won't work unless all VisitNumbers are int
     df <- df %>% mutate(VisitNumber = factor(VisitNumber))
+    
+    df
+  })
+  
+  applyFilters <- reactive({
+    
+    df <- joinDataFrames()
     
     #apply selected filters
     df <- df %>%
@@ -100,7 +110,7 @@ shinyServer(function(input, output) {
         Sex %in% input$showSex | ifelse(is.na(Sex), input$showSexNa, FALSE),
         between(Age.at.Sample, input$showAge[1], input$showAge[2]) | ifelse(is.na(Age.at.Sample), input$showAgeNa, FALSE),
         ifelse(is.na(Hypertension), input$showHypertensionNa,
-          ifelse(Hypertension, "Yes" %in% input$showHypertension, "No" %in% input$showHypertension)
+               ifelse(Hypertension, "Yes" %in% input$showHypertension, "No" %in% input$showHypertension)
         ),
         BmiClassification %in% input$showBmi | ifelse(is.na(BmiClassification), input$showBmiNa, FALSE),
         Education %in% input$showEducation | ifelse(is.na(Education), input$showEducationNa, FALSE),
@@ -112,29 +122,55 @@ shinyServer(function(input, output) {
       mutate(Education = factor(Education)) %>%
       mutate(ApoE = factor(ApoE))
     
-    #if normalizers are selected we need to mutate the selected X and/or Y
-    #variables so they are normalized appropriately.
-    #create a local xvarSelected and modify it if we end up normalizing
+    df
+  })
+  
+  #if normalizers are selected we need to mutate the selected X and/or Y
+  #variables so they are normalized appropriately.
+  applyNormalizers <- reactive({
     
-    xvarSelected <- input$xvarSelected
-    yvarSelected <- input$yvarSelected
-    
+    df <- applyFilters()
+  
     if(input$xtype %in% c("UrineFfaWv", "UrineDcaWv", "UrineTfaWv") & length(input$xNormalizers) > 0) {
       #create a string that has all the normalizers multiplied together then pass that into the special mutate_
       df <- df %>% mutate_(xNormalizers = paste(input$xNormalizers, collapse = " * "))
-      xvarSelected <- paste(c(xvarSelected, "xNormalizers"), collapse = "/")
     }
     
     if(input$ytype %in% c("UrineFfaWv", "UrineDcaWv", "UrineTfaWv") & length(input$yNormalizers) > 0) {
       #create a string that has all the normalizers multiplied together then pass that into the special mutate_
       df <- df %>% mutate_(yNormalizers = paste(input$yNormalizers, collapse = " * "))
-      yvarSelected <- paste(c(yvarSelected, "yNormalizers"), collapse = "/")
     }
     
-    ##################################
-    #ACTUALLY CREATE GGPLOT OBJECT NOW
-    ##################################
+    df
+  })
+  
+  #######################
+  #CREATE PLOT
+  #######################
+  
+  xvarSelected <- reactive({
+    xvarSelected <- input$xvarSelected
+    if(input$xtype %in% c("UrineFfaWv", "UrineDcaWv", "UrineTfaWv") & length(input$xNormalizers) > 0)
+      xvarSelected <- paste(c(xvarSelected, "xNormalizers"), collapse = "/")
     
+    xvarSelected
+  })
+  
+  yvarSelected <- reactive({
+    yvarSelected <- input$yvarSelected
+    if(input$ytype %in% c("UrineFfaWv", "UrineDcaWv", "UrineTfaWv") & length(input$yNormalizers) > 0)
+      yvarSelected <- paste(c(yvarSelected, "yNormalizers"), collapse = "/")
+    
+    yvarSelected
+  })
+  
+  output$plot <- renderPlotly({
+    
+    df <- applyNormalizers()
+    xvarSelected <- xvarSelected()
+    yvarSelected <- yvarSelected()
+    
+    #ACTUALLY CREATE GGPLOT OBJECT NOW
     #logic to color and/or add shapes to points
     if(input$colorPoints) {
       if(input$shapePoints) p <- ggplot(df, aes_string(x = xvarSelected, y = yvarSelected, color = input$colorBy, shape = input$shapeBy))
@@ -177,6 +213,22 @@ shinyServer(function(input, output) {
   output$event <- renderPrint({
     d <- event_data("plotly_hover")
     if (is.null(d)) "Hover on a point!" else d
+  })
+  
+  #conduct regression of scatterplot shown and print results
+  output$regressionResults <- renderPrint({
+    df <- applyNormalizers()
+    xvarSelected <- xvarSelected()
+    yvarSelected <- yvarSelected()
+    
+    if("x" %in% input$axesscale) xvarSelected <- paste(c("log(", xvarSelected,")"), collapse = "")
+    if("y" %in% input$axesscale) yvarSelected <- paste(c("log(", yvarSelected,")"), collapse = "")
+    
+    formula <- as.formula(paste(c(yvarSelected, "~", xvarSelected), collapse = ""))
+    
+    fit <- lm(formula, data = df)
+    
+    summary(fit)$coefficients
   })
   
 })
