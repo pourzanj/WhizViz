@@ -26,8 +26,20 @@ shinyServer(function(input, output) {
     #and added to the MasterList (see ImportCsv.R)
     if(input$xtype == "ClinicalWv") NumColNames <- c(MasterColumnsClinicalNum, NumColNames)
     if(input$xtype == "NeuroPsychWv") NumColNames <- c(MasterColumnsNeuroPsychNum, NumColNames)
-
-    selectInput("xvarSelected", "X-axis variable", NumColNames)
+    if(input$xtype %in% c("UrineFfaWv", "UrineDcaWv", "UrineTfaWv")) NumColNames <- c(MasterColumnsUrineNormalizersNum, NumColNames)
+    
+    #if we're looking at urine data provide the option to normalize
+    if(input$xtype %in% c("UrineFfaWv", "UrineDcaWv", "UrineTfaWv"))
+      list(
+        selectInput("xvarSelected", "X-axis variable", NumColNames),
+        checkboxGroupInput("xNormalizers", "Normalize (Divide) X By:",
+                           choices = c("Creatinine" = "Creatinine.Adjusted.Final.Con...ug.mL.",
+                                       "Albumin" = "Albumin..ug.mL.",
+                                       "Total Protein" = "Total.Protein...TPA..ug.ml",
+                                       "UACR" = "UACR..mg.g..ALB.CRN"))
+      )
+    else
+      list(selectInput("xvarSelected", "X-axis variable", NumColNames))
   })
   
   output$yvar <- renderUI({
@@ -41,8 +53,20 @@ shinyServer(function(input, output) {
     #and added to the MasterList (see ImportCsv.R)
     if(input$ytype == "ClinicalWv") NumColNames <- c(MasterColumnsClinicalNum, NumColNames)
     if(input$ytype == "NeuroPsychWv") NumColNames <- c(MasterColumnsNeuroPsychNum, NumColNames)
+    if(input$ytype %in% c("UrineFfaWv", "UrineDcaWv", "UrineTfaWv")) NumColNames <- c(MasterColumnsUrineNormalizersNum, NumColNames)
     
-    selectInput("yvarSelected", "Y-axis variable", NumColNames)
+    #if we're looking at urine data provide the option to normalize
+    if(input$ytype %in% c("UrineFfaWv", "UrineDcaWv", "UrineTfaWv"))
+      list(
+        selectInput("yvarSelected", "Y-axis variable", NumColNames),
+        checkboxGroupInput("yNormalizers", "Normalize (Divide) Y By:",
+                           choices = c("Creatinine" = "Creatinine.Adjusted.Final.Con...ug.mL.",
+                                       "Albumin" = "Albumin..ug.mL.",
+                                       "Total Protein" = "Total.Protein...TPA..ug.ml",
+                                       "UACR" = "UACR..mg.g..ALB.CRN"))
+      )
+    else
+      list(selectInput("yvarSelected", "Y-axis variable", NumColNames))
   })
   
   output$numMissing <- renderPrint({
@@ -61,7 +85,7 @@ shinyServer(function(input, output) {
     #joining join the selected data frames with the MasterList. Only need to join the Y
     #data frame if it's different than the X
     df <- MasterListWv %>% left_join(eval(DfNameX), by = c("Code", "VisitNumber"))
-    if(input$xtype != input$ytype) df <- MasterListWv %>% left_join(eval(DfNameY), by = c("Code", "VisitNumber"))
+    if(input$xtype != input$ytype) df <- df %>% left_join(eval(DfNameY), by = c("Code", "VisitNumber"))
     
     #to apply VisitNumber filter we have to convert VisitNumber from int to factor
     df <- df %>% mutate(VisitNumber = factor(VisitNumber))
@@ -88,14 +112,37 @@ shinyServer(function(input, output) {
       mutate(Education = factor(Education)) %>%
       mutate(ApoE = factor(ApoE))
     
+    #if normalizers are selected we need to mutate the selected X and/or Y
+    #variables so they are normalized appropriately.
+    #create a local xvarSelected and modify it if we end up normalizing
+    
+    xvarSelected <- input$xvarSelected
+    yvarSelected <- input$yvarSelected
+    
+    if(input$xtype %in% c("UrineFfaWv", "UrineDcaWv", "UrineTfaWv") & length(input$xNormalizers) > 0) {
+      #create a string that has all the normalizers multiplied together then pass that into the special mutate_
+      df <- df %>% mutate_(xNormalizers = paste(input$xNormalizers, collapse = " * "))
+      xvarSelected <- paste(c(xvarSelected, "xNormalizers"), collapse = "/")
+    }
+    
+    if(input$ytype %in% c("UrineFfaWv", "UrineDcaWv", "UrineTfaWv") & length(input$yNormalizers) > 0) {
+      #create a string that has all the normalizers multiplied together then pass that into the special mutate_
+      df <- df %>% mutate_(yNormalizers = paste(input$yNormalizers, collapse = " * "))
+      yvarSelected <- paste(c(yvarSelected, "yNormalizers"), collapse = "/")
+    }
+    
+    ##################################
+    #ACTUALLY CREATE GGPLOT OBJECT NOW
+    ##################################
+    
     #logic to color and/or add shapes to points
     if(input$colorPoints) {
-      if(input$shapePoints) p <- ggplot(df, aes_string(x = input$xvarSelected, y = input$yvarSelected, color = input$colorBy, shape = input$shapeBy))
-      else p <- ggplot(df, aes_string(x = input$xvarSelected, y = input$yvarSelected, color = input$colorBy))
+      if(input$shapePoints) p <- ggplot(df, aes_string(x = xvarSelected, y = yvarSelected, color = input$colorBy, shape = input$shapeBy))
+      else p <- ggplot(df, aes_string(x = xvarSelected, y = yvarSelected, color = input$colorBy))
     }
     else { 
-      if(input$shapePoints) p <- ggplot(df, aes_string(x = input$xvarSelected, y = input$yvarSelected, shape = input$shapeBy))
-      else p <- ggplot(df, aes_string(x = input$xvarSelected, y = input$yvarSelected))
+      if(input$shapePoints) p <- ggplot(df, aes_string(x = xvarSelected, y = yvarSelected, shape = input$shapeBy))
+      else p <- ggplot(df, aes_string(x = xvarSelected, y = yvarSelected))
     }
     
     #geom point with text will allow us to hover over patient to get MasterList info

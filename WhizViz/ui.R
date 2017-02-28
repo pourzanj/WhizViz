@@ -67,47 +67,43 @@ shinyUI(fluidPage(
                                                                                        max(MasterListWv$EstimatedTauAbby, na.rm = TRUE))),
       #checkboxInput("showTauNa", "Include Missing", TRUE),
 
-      # selectizeInput('showSex', 'Sex:', choices = levels(MasterListWv$Sex_),
-      #                selected = levels(MasterListWv$Sex_), multiple = TRUE),
-      # checkboxInput("showSexNa", "Include Missing", TRUE),
-      # 
-      # sliderInput("showAge", "Age", min(MasterListWv$Age_, na.rm = TRUE),
-      #             max(MasterListWv$Age_, na.rm = TRUE), value = c(min(MasterListWv$Age_, na.rm = TRUE), 
-      #                                                                                  max(MasterListWv$Age_, na.rm = TRUE))),
-      # checkboxInput("showAgeNa", "Include Missing", TRUE),
-      # 
-      # selectizeInput('showHypertension', 'Hypertension:', choices = c("Yes", "No"),
-      #                selected = c("Yes", "No"), multiple = TRUE),
-      # checkboxInput("showHypertensionNa", "Include Missing", TRUE),
-      # 
-      # selectizeInput('showBmi', 'BMI:', choices = levels(MasterListWv$BmiClassification),
-      #                selected = levels(MasterListWv$BmiClassification), multiple = TRUE),
-      # checkboxInput("showBmiNa", "Include Missing", TRUE),
-      # 
-      # selectizeInput('showEducation', 'Education:', choices = levels(MasterListWv$Education_),
-      #                selected = levels(MasterListWv$Education_), multiple = TRUE),
-      # checkboxInput("showEducationNa", "Include Missing", TRUE),
-      # 
-      # selectizeInput('showApoe', 'ApoE:', choices = levels(MasterListWv$ApoE_), selected = levels(MasterListWv$ApoE_), multiple = TRUE),
-      # checkboxInput("showApoeNa", "Include Missing", TRUE),
+      selectizeInput('showSex', 'Sex:', choices = levels(MasterListWv$Sex),
+                     selected = levels(MasterListWv$Sex), multiple = TRUE),
+      checkboxInput("showSexNa", "Include Missing", TRUE),
+
+      sliderInput("showAge", "Age", min(MasterListWv$Age.at.Sample, na.rm = TRUE),
+                  max(MasterListWv$Age.at.Sample, na.rm = TRUE), value = c(min(MasterListWv$Age.at.Sample, na.rm = TRUE),
+                                                                                       max(MasterListWv$Age.at.Sample, na.rm = TRUE))),
+      checkboxInput("showAgeNa", "Include Missing", TRUE),
+
+      selectizeInput('showHypertension', 'Hypertension:', choices = c("Yes", "No"),
+                     selected = c("Yes", "No"), multiple = TRUE),
+      checkboxInput("showHypertensionNa", "Include Missing", TRUE),
+
+      selectizeInput('showBmi', 'BMI:', choices = levels(MasterListWv$BmiClassification),
+                     selected = levels(MasterListWv$BmiClassification), multiple = TRUE),
+      checkboxInput("showBmiNa", "Include Missing", TRUE),
+
+      selectizeInput('showEducation', 'Education:', choices = levels(MasterListWv$Education),
+                     selected = levels(MasterListWv$Education), multiple = TRUE),
+      checkboxInput("showEducationNa", "Include Missing", TRUE),
+
+      selectizeInput('showApoe', 'ApoE:', choices = levels(MasterListWv$ApoE), selected = levels(MasterListWv$ApoE), multiple = TRUE),
+      checkboxInput("showApoeNa", "Include Missing", TRUE),
       
       
       #########################
       h2("Color"),
       checkboxInput("colorPoints", "Color Points", value = FALSE),
-      selectizeInput("colorBy", "Variable to Color By", c("VisitNumber", "EstimatedClassification_", "AgeLevels", "Sex_", "Education_", "ApoE_", "BmiClassification", "AbLevels", "TauLevels", "Hypertension_")),
+      selectizeInput("colorBy", "Variable to Color By", MasterListFactorNames),
       
       h2("Shape By"),
       checkboxInput("shapePoints", "Shape Points", value = FALSE),
-      selectizeInput("shapeBy", "Variable to Color By", c("VisitNumber", "EstimatedClassification_", "AgeLevels", "Sex_", "Education_", "ApoE_", "BmiClassification", "AbLevels", "TauLevels", "Hypertension_")),
+      selectizeInput("shapeBy", "Variable to Color By", MasterListFactorNames),
       
       h2("Facet By"),
       checkboxInput("facetX", "Facet", value = FALSE),
-      selectizeInput("facetXBy", "Variable to Facet X By", c("VisitNumber", "EstimatedClassification_", "AgeLevels", "Sex_", "Education_", "ApoE_", "BmiClassification", "AbLevels", "TauLevels", "Hypertension_"))
-      #checkboxInput("facetY", "Facet on Y-Axis", value = FALSE),
-      #selectizeInput("facetYBy", "Variable to Facet Y By", c("VisitNumber", "`Clinical Dx`", "AgeLevels", "Sex", "Education", "ApoE", "BmiClassification", "AbLevels", "TauLevels", "HypertensionDx"))
-      
-      
+      selectizeInput("facetXBy", "Variable to Facet X By", MasterListFactorNames)
     ),
     
     # Show a plot of the generated distribution
