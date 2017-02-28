@@ -3,6 +3,7 @@ library(tidyr)
 library(dplyr)
 library(boot)
 library(lubridate)
+library(purrr)
 
 #
 Clinical <- read_csv("~/Alzheimers/data/Clinical.csv")
@@ -109,6 +110,18 @@ Volumetrics <- rbind(Volumetrics12, Volumetrics14)
 #removed from that original frame, because otherwise when Whizviz rejoins that frame to Master
 #there will be an annoying naming conflict.
 
+MasterColumnsClinical <- c("EstimatedClassification", "EstimatedAbAbby", "EstimatedTauAbby",
+                           "CSF A_42 (pg/mL) (MSD 6E10) (Zlokovic lab)",
+                           "CSF Total tau (pg/mL) (MSD) (Zlokovic lab)", "B Amyloid Level pg/ml (Abby)",
+                           "Total Tau Level pg/ml (Abby)", "Clinical Dx", "Sex", "Age at Sample", "Education",
+                           "BMI", "Hypertension", "Traumatic Brain Injury", "Other Medical Conditions", "ApoE",
+                           "Meds and Supplements")
+
+MasterColumnsUrineNormalizers <- c("Creatinine Adjusted Final Con. (ug/mL)", "Total Protein  (TPA) ug/ml",
+                                   "Albumin (ug/mL)", "UACR (mg/g) ALB/CRN")
+
+MasterColumnsNeuroPsych <- c("STROOP INTERFERENCE RAW", "STROOP INTERFERENCE Z-SCORE")
+
 #we have to get Dx from UrineNormalizers, because the Dx from CLinical does
 #not include the PAT and NAT specification
 MasterList <- Clinical %>%
@@ -116,16 +129,10 @@ MasterList <- Clinical %>%
   left_join(NeuroPsych, by = c("Code", "VisitNumber")) %>%
   #change names specifically so that they don't match names of columns of Clinical or any other Df
   #this causes problems later when you join and there are duplicate column names
-  select(Code, VisitNumber,
-         EstimatedClassification, `CSF A_42 (pg/mL) (MSD 6E10) (Zlokovic lab)`, `CSF Total tau (pg/mL) (MSD) (Zlokovic lab)`,
-         `B Amyloid Level pg/ml (Abby)`, `Total Tau Level pg/ml (Abby)`,
-         `Clinical Dx`, Sex, `Age at Sample`, Education, BMI, Hypertension, `Traumatic Brain Injury`,
-         `Other Medical Conditions`, ApoE, `Meds and Supplements`,
-         `STROOP INTERFERENCE RAW`, `STROOP INTERFERENCE Z-SCORE`,
-         `Creatinine Adjusted Final Con. (ug/mL)`, `Total Protein  (TPA) ug/ml`, `Albumin (ug/mL)`,
-         `UACR (mg/g) ALB/CRN`) %>%
+  select(one_of(c("Code", "VisitNumber", MasterColumnsClinical,
+                  MasterColumnsUrineNormalizers, MasterColumnsNeuroPsych))) %>%
   
-  mutate(VisitNumber = factor(VisitNumber)) %>%
+  #mutate(VisitNumber = factor(VisitNumber)) %>%
   mutate(EstimatedClassification = factor(EstimatedClassification)) %>%
   mutate(`Clinical Dx` = factor(`Clinical Dx`)) %>%
   mutate(Sex = factor(Sex)) %>%
@@ -147,18 +154,22 @@ MasterList <- Clinical %>%
                          labels = c("Q1", "Q2", "Q3", "Q4"),
                          include.lowest = TRUE))
 
-Clinical <- Clinical %>%
-  select(-EstimatedClassification, -`CSF A_42 (pg/mL) (MSD 6E10) (Zlokovic lab)`, -`CSF Total tau (pg/mL) (MSD) (Zlokovic lab)`,
-         -`B Amyloid Level pg/ml (Abby)`, -`Total Tau Level pg/ml (Abby)`,
-         -`Clinical Dx`, -Sex, -`Age at Sample`, -Education, -BMI, -Hypertension, -`Traumatic Brain Injury`,
-         -`Other Medical Conditions`, -ApoE, -`Meds and Supplements`)
+#now remove the columns we used in MasterList from the df's they originally came from
+Clinical <- Clinical %>% select(-one_of(MasterColumnsClinical))
+UrineNormalizers <- UrineNormalizers %>% select(-one_of(MasterColumnsUrineNormalizers))
+NeuroPsych <- NeuroPsych %>% select(-one_of(MasterColumnsNeuroPsych))
 
-UrineNormalizers <- UrineNormalizers %>%
-  select(-`Creatinine Adjusted Final Con. (ug/mL)`, -`Total Protein  (TPA) ug/ml`, -`Albumin (ug/mL)`,
-         -`UACR (mg/g) ALB/CRN`)
-
-NeuroPsych <- NeuroPsych %>%
-  select(-`STROOP INTERFERENCE RAW`, -`STROOP INTERFERENCE Z-SCORE`)
+#now keep the names of the columns we selected, because in WhizViz when we select the 
+#data frame e.g. Clinical we want those old column names to still appear in that category
+#so we can plot it. Although technically at that point, those columns will be coming from the
+#MasterList in the join.
+#for the purposes of plotting in WhizViz we only want the numeric columns shown
+#note also that later on in this script we change these column names with the
+#make.names function so the names in these vectors won't match the renamed columns
+#unless we apply that function to these vectors too
+MasterColumnsClinicalNum <- MasterList %>% select(one_of(MasterColumnsClinical)) %>% purrr::keep(is.numeric) %>% colnames %>% make.names
+MasterColumnsUrineNormalizersNum <- MasterList %>% select(one_of(MasterColumnsUrineNormalizers)) %>% purrr::keep(is.numeric) %>% colnames %>% make.names
+MasterColumnsNeuroPsychNum <- MasterList %>% select(one_of(MasterColumnsNeuroPsych)) %>% purrr::keep(is.numeric) %>% colnames %>% make.names
 
 #
 UrineFfa <- read_csv("~/Alzheimers/data/UrineFfa.csv", 
@@ -303,4 +314,5 @@ save(ClinicalWv, NeuroPsychWv, VolumetricsWv, MasterListWv,
      CsfFfaWv, CsfFfaPercentWv,
      CsfSfWv, CsfSfPercentWv,
      CsfNpWv, CsfNpPercentWv,
+     MasterColumnsClinicalNum, MasterColumnsNeuroPsychNum, MasterColumnsUrineNormalizersNum,
      file = "data/WhizViz.Rdata")

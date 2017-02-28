@@ -21,18 +21,20 @@ shinyUI(fluidPage(
     
     sidebarPanel(
       selectInput("xtype", "X-axis Data Type",
-                  c("Clinical" = "ClinicalWv", "CSF FFA" = "CsfFfaWv",
-                    "CSF TFA" = "CsfTfaWv", "Neuro Psych" = "NeuroPsychWv",
-                    "Urine DCA" = "UrineDcaWv", "Urine FFA" = "UrineFfaWv",
-                    "Urine TFA" = "UrineTfaWv", "Volumetrics" = "Volumetrics")),
+                  c("Clinical" = "ClinicalWv", "Neuro Psych" = "NeuroPsychWv", "Volumetrics" = "VolumetricsWv",
+                    "Urine FFA" = "UrineFfaWv", "Urine DCA" = "UrineDcaWv", "Urine TFA" = "UrineTfaWv",
+                    "CSF FFA" = "CsfFfaWv", "CSF FFA (As Percent)" = "CsfFfaPercentWv",
+                    "CSF SF" = "CsfSfWv", "CSF SF (As Percent)" = "CsfSfPercentWv",
+                    "CSF NP" = "CsfNpWv", "CSF NP (As Percent)" = "CsfNpPercentWv")),
       
       uiOutput("xvar"),
 
       selectInput("ytype", "Y-axis Data Type",
-                  c("Clinical" = "ClinicalWv", "CSF FFA" = "CsfFfaWv",
-                    "CSF TFA" = "CsfTfaWv", "Neuro Psych" = "NeuroPsychWv",
-                    "Urine DCA" = "UrineDcaWv", "Urine FFA" = "UrineFfaWv",
-                    "Urine TFA" = "UrineTfaWv", "Volumetrics" = "Volumetrics")),
+                  c("Clinical" = "ClinicalWv", "Neuro Psych" = "NeuroPsychWv", "Volumetrics" = "VolumetricsWv",
+                    "Urine FFA" = "UrineFfaWv", "Urine DCA" = "UrineDcaWv", "Urine TFA" = "UrineTfaWv",
+                    "CSF FFA" = "CsfFfaWv", "CSF FFA (As Percent)" = "CsfFfaPercentWv",
+                    "CSF SF" = "CsfSfWv", "CSF SF (As Percent)" = "CsfSfPercentWv",
+                    "CSF NP" = "CsfNpWv", "CSF NP (As Percent)" = "CsfNpPercentWv")),
       
       uiOutput("yvar"),
       
@@ -46,47 +48,48 @@ shinyUI(fluidPage(
       
       #########################
       h2("Filters"),
-      selectizeInput('showVisits', 'Visits:', choices = levels(General$VisitNumber),
-                     selected = levels(General$VisitNumber), multiple = TRUE),
+      selectizeInput('showVisits', 'Visits:', choices = levels(factor(MasterListWv$VisitNumber)),
+                     selected = levels(factor(MasterListWv$VisitNumber)), multiple = TRUE),
       checkboxInput("showVisitsNa", "Include Missing", TRUE),
-      
-      selectizeInput('showDx', 'Classification:', choices = levels(General$EstimatedClassification_),
-                     selected = levels(General$EstimatedClassification_), multiple = TRUE),
+
+      selectizeInput('showDx', 'Classification:', choices = levels(MasterListWv$EstimatedClassification),
+                     selected = levels(MasterListWv$EstimatedClassification), multiple = TRUE),
       checkboxInput("showDxNa", "Include Missing", TRUE),
-      
-      sliderInput("showAb", "CSF AB (Abby)", min(General$AbAbby, na.rm = TRUE),
-                  max(General$AbAbby, na.rm = TRUE), value = c(min(General$AbAbby, na.rm = TRUE), 
-                                                                                           max(General$AbAbby, na.rm = TRUE))),
-      checkboxInput("showAbNa", "Include Missing", TRUE),
-      
-      sliderInput("showTau", "CSF Tau (Abby)", min(General$TauAbby, na.rm = TRUE),
-                  max(General$TauAbby, na.rm = TRUE), value = c(min(General$TauAbby, na.rm = TRUE), 
-                                                                                       max(General$TauAbby, na.rm = TRUE))),
-      checkboxInput("showTauNa", "Include Missing", TRUE),
-      
-      selectizeInput('showSex', 'Sex:', choices = levels(General$Sex_),
-                     selected = levels(General$Sex_), multiple = TRUE),
-      checkboxInput("showSexNa", "Include Missing", TRUE),
-      
-      sliderInput("showAge", "Age", min(General$Age_, na.rm = TRUE),
-                  max(General$Age_, na.rm = TRUE), value = c(min(General$Age_, na.rm = TRUE), 
-                                                                                       max(General$Age_, na.rm = TRUE))),
-      checkboxInput("showAgeNa", "Include Missing", TRUE),
-      
-      selectizeInput('showHypertension', 'Hypertension:', choices = c("Yes", "No"),
-                     selected = c("Yes", "No"), multiple = TRUE),
-      checkboxInput("showHypertensionNa", "Include Missing", TRUE),
-      
-      selectizeInput('showBmi', 'BMI:', choices = levels(General$BmiClassification),
-                     selected = levels(General$BmiClassification), multiple = TRUE),
-      checkboxInput("showBmiNa", "Include Missing", TRUE),
-      
-      selectizeInput('showEducation', 'Education:', choices = levels(General$Education_),
-                     selected = levels(General$Education_), multiple = TRUE),
-      checkboxInput("showEducationNa", "Include Missing", TRUE),
-      
-      selectizeInput('showApoe', 'ApoE:', choices = levels(General$ApoE_), selected = levels(General$ApoE_), multiple = TRUE),
-      checkboxInput("showApoeNa", "Include Missing", TRUE),
+
+      sliderInput("showAb", "CSF Estimated AB (Abby)", min(MasterListWv$EstimatedAbAbby, na.rm = TRUE),
+                  max(MasterListWv$EstimatedAbAbby, na.rm = TRUE), value = c(min(MasterListWv$EstimatedAbAbby, na.rm = TRUE),
+                                                                                           max(MasterListWv$EstimatedAbAbby, na.rm = TRUE))),
+      #Note estimated CSF values should not be missing
+      #checkboxInput("showAbNa", "Include Missing", TRUE),
+
+      sliderInput("showTau", "CSF Estimated Tau (Abby)", min(MasterListWv$EstimatedTauAbby, na.rm = TRUE),
+                  max(MasterListWv$EstimatedTauAbby, na.rm = TRUE), value = c(min(MasterListWv$EstimatedTauAbby, na.rm = TRUE),
+                                                                                       max(MasterListWv$EstimatedTauAbby, na.rm = TRUE))),
+      #checkboxInput("showTauNa", "Include Missing", TRUE),
+
+      # selectizeInput('showSex', 'Sex:', choices = levels(MasterListWv$Sex_),
+      #                selected = levels(MasterListWv$Sex_), multiple = TRUE),
+      # checkboxInput("showSexNa", "Include Missing", TRUE),
+      # 
+      # sliderInput("showAge", "Age", min(MasterListWv$Age_, na.rm = TRUE),
+      #             max(MasterListWv$Age_, na.rm = TRUE), value = c(min(MasterListWv$Age_, na.rm = TRUE), 
+      #                                                                                  max(MasterListWv$Age_, na.rm = TRUE))),
+      # checkboxInput("showAgeNa", "Include Missing", TRUE),
+      # 
+      # selectizeInput('showHypertension', 'Hypertension:', choices = c("Yes", "No"),
+      #                selected = c("Yes", "No"), multiple = TRUE),
+      # checkboxInput("showHypertensionNa", "Include Missing", TRUE),
+      # 
+      # selectizeInput('showBmi', 'BMI:', choices = levels(MasterListWv$BmiClassification),
+      #                selected = levels(MasterListWv$BmiClassification), multiple = TRUE),
+      # checkboxInput("showBmiNa", "Include Missing", TRUE),
+      # 
+      # selectizeInput('showEducation', 'Education:', choices = levels(MasterListWv$Education_),
+      #                selected = levels(MasterListWv$Education_), multiple = TRUE),
+      # checkboxInput("showEducationNa", "Include Missing", TRUE),
+      # 
+      # selectizeInput('showApoe', 'ApoE:', choices = levels(MasterListWv$ApoE_), selected = levels(MasterListWv$ApoE_), multiple = TRUE),
+      # checkboxInput("showApoeNa", "Include Missing", TRUE),
       
       
       #########################

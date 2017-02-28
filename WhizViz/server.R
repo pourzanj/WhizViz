@@ -21,6 +21,12 @@ shinyServer(function(input, output) {
     #plot factors
     DfName <- parse(text = input$xtype)
     NumColNames <- eval(DfName) %>% purrr::keep(is.numeric) %>% colnames
+    
+    #remember we have to add back in column names that were removed
+    #and added to the MasterList (see ImportCsv.R)
+    if(input$xtype == "ClinicalWv") NumColNames <- c(MasterColumnsClinicalNum, NumColNames)
+    if(input$xtype == "NeuroPsychWv") NumColNames <- c(MasterColumnsNeuroPsychNum, NumColNames)
+
     selectInput("xvarSelected", "X-axis variable", NumColNames)
   })
   
@@ -30,13 +36,19 @@ shinyServer(function(input, output) {
     #plot factors
     DfName <- parse(text = input$ytype)
     NumColNames <- eval(DfName) %>% purrr::keep(is.numeric) %>% colnames
+    
+    #remember we have to add back in column names that were removed
+    #and added to the MasterList (see ImportCsv.R)
+    if(input$ytype == "ClinicalWv") NumColNames <- c(MasterColumnsClinicalNum, NumColNames)
+    if(input$ytype == "NeuroPsychWv") NumColNames <- c(MasterColumnsNeuroPsychNum, NumColNames)
+    
     selectInput("yvarSelected", "Y-axis variable", NumColNames)
   })
   
   output$numMissing <- renderPrint({
     DfNameX <- parse(text = input$xtype)
     DfNameY <- parse(text = input$ytype)
-    df <- full_join(eval(DfNameX), eval(DfNameY)) %>% left_join(General)
+    df <- full_join(eval(DfNameX), eval(DfNameY)) %>% left_join(MasterListWv)
     print(paste("Total Obs.: ", nrow(df), " Missing Obs. ",
                 sum(is.na(df[, input$xvarSelected]) | is.na(df[, input$yvarSelected]))))
   })
@@ -46,33 +58,35 @@ shinyServer(function(input, output) {
     DfNameX <- parse(text = input$xtype)
     DfNameY <- parse(text = input$ytype)
     
-    #joining the same df with itself changes the names which we don't want
-    if(input$xtype == input$ytype) df <- General %>% left_join(eval(DfNameX), by = c("Code", "VisitNumber"))
-    else df <- General %>% left_join(full_join(eval(DfNameX), eval(DfNameY), by = c("Code", "VisitNumber")), by = c("Code", "VisitNumber"), suffix = c("", ".y"))
+    #joining join the selected data frames with the MasterList. Only need to join the Y
+    #data frame if it's different than the X
+    df <- MasterListWv %>% left_join(eval(DfNameX), by = c("Code", "VisitNumber"))
+    if(input$xtype != input$ytype) df <- MasterListWv %>% left_join(eval(DfNameY), by = c("Code", "VisitNumber"))
+    
+    #to apply VisitNumber filter we have to convert VisitNumber from int to factor
+    df <- df %>% mutate(VisitNumber = factor(VisitNumber))
+    
+    #apply selected filters
     df <- df %>%
       filter(
         VisitNumber %in% input$showVisits | ifelse(is.na(VisitNumber), input$showVisitsNa, FALSE),
-        EstimatedClassification_ %in% input$showDx | ifelse(is.na(EstimatedClassification_), input$showDxNa, FALSE),
-        between(AbAbby, input$showAb[1], input$showAb[2]) | ifelse(is.na(AbAbby), input$showAbNa, FALSE),
-        between(TauAbby, input$showTau[1], input$showTau[2]) | ifelse(is.na(TauAbby), input$showTauNa, FALSE),
-        Sex_ %in% input$showSex | ifelse(is.na(Sex_), input$showSexNa, FALSE),
-        between(Age_, input$showAge[1], input$showTau[2]) | ifelse(is.na(Age_), input$showAgeNa, FALSE),
-        ifelse(is.na(Hypertension_), input$showHypertensionNa,
-          ifelse(Hypertension_, "Yes" %in% input$showHypertension, "No" %in% input$showHypertension)
-        ),
-        BmiClassification %in% input$showBmi | ifelse(is.na(BmiClassification), input$showBmiNa, FALSE),
-        Education_ %in% input$showEducation | ifelse(is.na(Education_), input$showEducationNa, FALSE),
-        ApoE_ %in% input$showApoe | ifelse(is.na(ApoE_), input$showApoeNa, FALSE)
-      ) %>%
-      #refactor to take out empty factors once we've filtered
-      mutate(VisitNumber = factor(VisitNumber)) %>%
-      mutate(ClinicalDx = factor(ClinicalDx)) %>%
-      mutate(Education_ = factor(Education_)) %>%
-      mutate(ApoE_ = factor(ApoE_))
-    
-    # p <- ggplot(df, aes_string(x = input$xvarSelected, y = input$yvarSelected)) +
-    #   geom_point(aes(text = paste("Code:", Code, "-", VisitNumber,
-    #                               "</br>Classification:", `Clinical Dx`)))
+        EstimatedClassification %in% input$showDx | ifelse(is.na(EstimatedClassification), input$showDxNa, FALSE),
+        between(EstimatedAbAbby, input$showAb[1], input$showAb[2]) | ifelse(is.na(EstimatedAbAbby), input$showAbNa, FALSE),
+        between(EstimatedTauAbby, input$showTau[1], input$showTau[2]) | ifelse(is.na(EstimatedTauAbby), input$showTauNa, FALSE)#,
+        # Sex_ %in% input$showSex | ifelse(is.na(Sex_), input$showSexNa, FALSE),
+        # between(Age_, input$showAge[1], input$showTau[2]) | ifelse(is.na(Age_), input$showAgeNa, FALSE),
+        # ifelse(is.na(Hypertension_), input$showHypertensionNa,
+        #   ifelse(Hypertension_, "Yes" %in% input$showHypertension, "No" %in% input$showHypertension)
+        # ),
+        # BmiClassification %in% input$showBmi | ifelse(is.na(BmiClassification), input$showBmiNa, FALSE),
+        # Education_ %in% input$showEducation | ifelse(is.na(Education_), input$showEducationNa, FALSE),
+        # ApoE_ %in% input$showApoe | ifelse(is.na(ApoE_), input$showApoeNa, FALSE)
+      ) #%>%
+    #   #refactor to take out empty factors once we've filtered
+    #   mutate(VisitNumber = factor(VisitNumber)) %>%
+    #   mutate(ClinicalDx = factor(ClinicalDx)) %>%
+    #   mutate(Education_ = factor(Education_)) %>%
+    #   mutate(ApoE_ = factor(ApoE_))
     
     #logic to color and/or add shapes to points
     if(input$colorPoints) {
@@ -84,26 +98,21 @@ shinyServer(function(input, output) {
       else p <- ggplot(df, aes_string(x = input$xvarSelected, y = input$yvarSelected))
     }
     
+    #geom point with text will allow us to hover over patient to get MasterList info
     p <- p + geom_point(aes(text = paste("Code:", Code, "-", VisitNumber,
-                                  "</br>Classification:", ClinicalDx,
-                                  "</br>CSF AB Zlokovic:", CsfAb42_Zlokovic,
-                                  "</br>CSF Tau Zlokovic:", CsfTau_Zlokovic,
-                                  "</br>CSF AB Abby:", AbAbby,
-                                  "</br>CSF Tau Abby:", TauAbby,
-                                  "</br>Clinical Dx:", ClinicalDx,
-                                  "</br>Sex:", Sex_,
-                                  "</br>Age at Samples:", Age_,
-                                  "</br>Education:", Education_,
+                                  "</br>Estimated Classification:", EstimatedClassification,
+                                  "</br>CSF Estimated AB Abby:", EstimatedAbAbby,
+                                  "</br>CSF Estimated Tau Abby:", EstimatedTauAbby,
+                                  "</br>Sex:", Sex,
+                                  "</br>Age at Samples:", Age.at.Sample,
+                                  "</br>Education:", Education,
                                   "</br>Bmi Classification:", BmiClassification,
-                                  "</br>Hypertension:", Hypertension_,
-                                  "</br>Traumatic Brain Injury:", TBI_,
-                                  "</br>Other Medical Conditions:", Other_Medical_Conditions_ ,
-                                  "</br>`Meds and Supplements`:", MedsAndSupplements,
-                                  "</br>`STROOP INTERFERENCE RAW`:", StroopRaw,
-                                  "</br>`STROOP INTERFERENCE Z-SCORE`:", StroopZ,
-                                  "</br>ChangeInIntraCranialVolume:", ChangeInCranialVol,
-                                  "</br>ChangeInGrayMatterVolume:", ChangeInGrayVol,
-                                  "</br>HypertensionDx:", Hypertension_)))
+                                  "</br>Hypertension:", Hypertension,
+                                  "</br>Traumatic Brain Injury:", Traumatic.Brain.Injury,
+                                  "</br>Other Medical Conditions:", Other.Medical.Conditions,
+                                  "</br>`Meds and Supplements`:", "Meds.and.Supplements",
+                                  "</br>`STROOP INTERFERENCE RAW`:", STROOP.INTERFERENCE.RAW,
+                                  "</br>`STROOP INTERFERENCE Z-SCORE`:", STROOP.INTERFERENCE.Z.SCORE)))
 
     if("x" %in% input$axesscale) p <- p + scale_x_log10()
     if("y" %in% input$axesscale) p <- p + scale_y_log10()
