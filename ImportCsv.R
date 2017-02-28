@@ -141,12 +141,12 @@ MasterList <- Clinical %>%
   mutate(Hypertension = as.logical(Hypertension)) %>%
   separate(BMI, c("BmiClassification", "BmiNumber"), sep = "=") %>%
   mutate(BmiClassification = factor(BmiClassification)) %>%
-  mutate(`B Amyloid Level pg/ml (Abby)` = cut(`B Amyloid Level pg/ml (Abby)`,
-                        breaks = quantile(`B Amyloid Level pg/ml (Abby)`, na.rm = TRUE),
+  mutate(EstimatedAbAbbyQuantiles= cut(EstimatedAbAbby,
+                        breaks = quantile(EstimatedAbAbby, na.rm = TRUE),
                         labels = c("Q1", "Q2", "Q3", "Q4"),
                         include.lowest = TRUE)) %>%
-  mutate(`Total Tau Level pg/ml (Abby)` = cut(`Total Tau Level pg/ml (Abby)`,
-                        breaks = quantile(`Total Tau Level pg/ml (Abby)`, na.rm = TRUE),
+  mutate(EstimatedTauAbbyQuantiles = cut(EstimatedTauAbby,
+                        breaks = quantile(EstimatedTauAbby, na.rm = TRUE),
                         labels = c("Q1", "Q2", "Q3", "Q4"),
                         include.lowest = TRUE)) %>%
   mutate(AgeLevels = cut(`Age at Sample`,

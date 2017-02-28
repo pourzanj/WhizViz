@@ -72,21 +72,21 @@ shinyServer(function(input, output) {
         VisitNumber %in% input$showVisits | ifelse(is.na(VisitNumber), input$showVisitsNa, FALSE),
         EstimatedClassification %in% input$showDx | ifelse(is.na(EstimatedClassification), input$showDxNa, FALSE),
         between(EstimatedAbAbby, input$showAb[1], input$showAb[2]) | ifelse(is.na(EstimatedAbAbby), input$showAbNa, FALSE),
-        between(EstimatedTauAbby, input$showTau[1], input$showTau[2]) | ifelse(is.na(EstimatedTauAbby), input$showTauNa, FALSE)#,
-        # Sex_ %in% input$showSex | ifelse(is.na(Sex_), input$showSexNa, FALSE),
-        # between(Age_, input$showAge[1], input$showTau[2]) | ifelse(is.na(Age_), input$showAgeNa, FALSE),
-        # ifelse(is.na(Hypertension_), input$showHypertensionNa,
-        #   ifelse(Hypertension_, "Yes" %in% input$showHypertension, "No" %in% input$showHypertension)
-        # ),
-        # BmiClassification %in% input$showBmi | ifelse(is.na(BmiClassification), input$showBmiNa, FALSE),
-        # Education_ %in% input$showEducation | ifelse(is.na(Education_), input$showEducationNa, FALSE),
-        # ApoE_ %in% input$showApoe | ifelse(is.na(ApoE_), input$showApoeNa, FALSE)
-      ) #%>%
-    #   #refactor to take out empty factors once we've filtered
-    #   mutate(VisitNumber = factor(VisitNumber)) %>%
-    #   mutate(ClinicalDx = factor(ClinicalDx)) %>%
-    #   mutate(Education_ = factor(Education_)) %>%
-    #   mutate(ApoE_ = factor(ApoE_))
+        between(EstimatedTauAbby, input$showTau[1], input$showTau[2]) | ifelse(is.na(EstimatedTauAbby), input$showTauNa, FALSE),
+        Sex %in% input$showSex | ifelse(is.na(Sex), input$showSexNa, FALSE),
+        between(Age.at.Sample, input$showAge[1], input$showAge[2]) | ifelse(is.na(Age.at.Sample), input$showAgeNa, FALSE),
+        ifelse(is.na(Hypertension), input$showHypertensionNa,
+          ifelse(Hypertension, "Yes" %in% input$showHypertension, "No" %in% input$showHypertension)
+        ),
+        BmiClassification %in% input$showBmi | ifelse(is.na(BmiClassification), input$showBmiNa, FALSE),
+        Education %in% input$showEducation | ifelse(is.na(Education), input$showEducationNa, FALSE),
+        ApoE %in% input$showApoe | ifelse(is.na(ApoE), input$showApoeNa, FALSE)
+      ) %>%
+      #refactor to take out empty factors once we've filtered
+      mutate(VisitNumber = factor(VisitNumber)) %>%
+      mutate(EstimatedClassification = factor(EstimatedClassification)) %>%
+      mutate(Education = factor(Education)) %>%
+      mutate(ApoE = factor(ApoE))
     
     #logic to color and/or add shapes to points
     if(input$colorPoints) {
