@@ -1,0 +1,46 @@
+---
+title: "Flexible Modeling of Alzheimer's Disease Progression with I-Splines"
+output: html_notebook
+---
+
+# Alzheimer's Disease Progression
+
+The progression of Alzheimer's Disease (AD) is characterized by the gradual deterioration of biomarkers and eventually basic memory and decision-making functions. Using these biomarker values and other tests to estimate how far an individual has progressed in the disease is valuable in diagnosis as well as in assessing the efficacy of interventions. Furthermore, it is of clinical and biological significance to be able to understand the order in which certain biomarkers begin to deteriorate and what their distribution might look like for various stages of the disease.
+
+To accomplish this, we introduce a probabilistic model that includes a latent, monotonically increasing variable that measures the progression of AD in an individual given their biomarker values. We used a basis of monotonic functions known as I-splines to flexibly model this monotonically increasing progression. The model also describes how the biomarker values deteriorate over the progression of AD. We illustrate how we fit the model in Stan to real patient data to realistically capture the progression of AD.
+
+# Data and Exploratory Analysis
+
+To simplify our notebook, we used a pre-cleaned tibble of biomarker data from the publically available Alzheimer's Disease Neuroimaging Initiative (ADNI) dataset. The tibble contains various biomarker measurements for 1,737 patients, as well as their age at the time of measurement. The biomarkers measured include the following:
+
+```{r}
+library(tidyverse)
+
+#load pre-cleaned tibble and preview
+load("adni_precleaned.Rdata")
+adni %>% sample_n(10)
+```
+
+* **ABETA**: Concentration of the amyloid-beta protein in cerebrospinal fluid (CSF), measured in pg/ml. In healthy individuals the harmful protein is actively cleared from the brain in to the CSF. In individuals with AD, the amyloid-beta protein concentrates in the brain to form harmful plaques. Low levels in the CSF indicate the protein is not being cleared from the brain, and is thus an indication of AD.
+* **HIPPO**: Volume of the individual's hippocampal brain region as measured by MRI and normalized to their baseline brain volume. In AD the hippocampus is known to shrink in size as the disease progresses.
+* **MMSE**: Mini-Mental State Examination (MMSE) test. A 30-point questionnaire administered by psycologists to assess working memory and brain function in an individual. Patients with AD show lowered scores in MMSE, but unfortunately lowered MMSE scored typically only show once the disease has progressed significantly.
+* **TAU**: Concentration of tau protein in CSF, measured in pg/ml. Tau is a protein that shows up as a byproduct of dead neurons. High tau in the CSF indicates an abundance of dying neurons in the brain.
+
+Currently, staging of AD is accomplished by the thorough review of a patient by a panel of expert doctors. While this diagnosis serves as a gold-standard, the diagnosis process is cumbersome, prone to subjectivity, and typically only includes three discrete levels, which does not represent the continuously progressing nature of AD. These three stages are in order of severity: Normal (NL), Mild Congnitive Impairment (MCI), and Dementia.
+
+Population histograms of these biomarkers during the three stages of the disease reveal a monotonic pattern in the four biomarkers we are considering. This suggests that these biomarkers can be modeled as coming from a single continuous latent variable that we can interpret as being a disease progression score.
+
+```{r}
+adni %>%
+  filter(DX %in% c("NL", "MCI", "Dementia")) %>%
+  ggplot(aes(VALUE)) +
+  geom_histogram() +
+  facet_grid(DX ~ BIOMARKER, scales = "free")
+```
+
+
+# Existing Models of Alzheimer's Disease Progression
+
+# I-Splines
+
+# Modeling Disease Progression with I-Splines
