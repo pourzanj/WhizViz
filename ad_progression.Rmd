@@ -1,6 +1,7 @@
 ---
 title: "Flexible Modeling of Alzheimer's Disease Progression with I-Splines"
 output: html_notebook
+bibliography: ref.bib
 ---
 
 # Alzheimer's Disease Progression
@@ -30,17 +31,79 @@ Currently, staging of AD is accomplished by the thorough review of a patient by 
 
 Population histograms of these biomarkers during the three stages of the disease reveal a monotonic pattern in the four biomarkers we are considering. This suggests that these biomarkers can be modeled as coming from a single continuous latent variable that we can interpret as being a disease progression score.
 
-```{r}
+```{r, fig.width=7}
 adni %>%
   filter(DX %in% c("NL", "MCI", "Dementia")) %>%
   ggplot(aes(VALUE)) +
   geom_histogram() +
   facet_grid(DX ~ BIOMARKER, scales = "free")
 ```
+For clarity and ease of presentation, we focus on 10 specific patients for the remainder of the notebook. We selected these patients to be of different sexes, ages, and stages of AD. Plots of biomarkers generally reveal monotonic trends in time for each patient:
+
+```{r, fig.width=10}
+adni10 <- adni %>% filter(RID %in% c(331,729,835,671,1010,5,16,677,4090,4874))
+
+adni10 %>%
+  ggplot(aes(AGE, VALUE, color = as.factor(RID))) +
+  geom_point() +
+  facet_grid(BIOMARKER ~ RID, scales = "free")
+```
 
 
 # Existing Models of Alzheimer's Disease Progression
 
+Existing models of AD progression utilize monotonic functions to capture the progression of biomarkers. @lorenzi2017disease use a monotonic Gaussian Process to model how each biomarker deteriorates over time in the population, and they use ordinary Gaussian Processes for each individual to describe random deviations from this general progression at the individual level. To achieve monotonicity in their Gaussian Processes they use the method proposed by @riihimaki2010gaussian, and fit their model using Expectation Propagation (EP). @jedynak2012computational take a different approach; they posit that the deterioration of individual biomarkers are tied to a single latent state for each patient that increases monotonically over time. This latent variable can thus be used as a disease progression score, representing how far in the disease an individual has progressed.
+
+## Linear Latent Progression Model
+
+While the model of @jedynak2012computational was originally presented in a frequentist least-squares framework, we translated the model to a probabilistic generative model and implemented it in Stan. We then made several expansions to the model to more realistically fit the data, most notably the use of I-splines which we describe in the next section. If we let $y_{ij}(t)$ denote the $j$th biomarker for the $i$th patient at age $t$, the original model of @jedynak2012computational can be translated to the following probabilistic generative model:
+
+$$
+\begin{eqnarray}
+s_i(t) &=& \alpha_i t + \beta_i \\
+y_{ij}(t) &\sim& \mathcal{N}(f(s_i(t)\, |\,  a_j, b_j, c_j, d_j),\sigma_j)
+\end{eqnarray}
+$$
+where $\sigma_j$ represents the error scale for the $j$th biomarker and $f(\cdot| a_j, b_j, c_j, d_j)$ represents a biomarker-specific 4-parameter sigmoid-curve for the $j$th biomarker
+
+$$
+f(s\,|\, a_j, b_j, c_j, d_j) = \frac{a_j}{1+e^{-b_j s- c_j}} + d_j.
+$$
+
+$s_i(t)$ is a monotonically increasing transformation of age that represents a continuous disease progression score for the $i$th individual. The individual specific parameters $\alpha_i$ and $\beta_i$ determine the rate of progression and relative onset of AD respectively for the $i$th individual. To ensure the progression variable $s_i(t)$ is monotonic in time, $\alpha_i$ is constrained to be positive.
+
+We implemented this model in Stan to obtain a baseline model. We note that in the original work of @jedynak2012computational, each patient in the model required at least two observations at different time points so that the parameter $\alpha_i$ was identifiable. In our Stan model, we instead rely on a hierarchical prior over $\alpha_i$ so that we can more flexibly fit those patients with few and even only one observation. This involves the following extension to the model:
+
+$$
+\begin{eqnarray}
+\gamma &\sim& \mathrm{HalfNormal}(0, 10)\\
+\alpha_i &\sim& \mathrm{HalfNormal}(0, \gamma).
+\end{eqnarray}
+$$
+
+
+
+```{r, message=FALSE}
+library(rstan)
+
+dat <- list(N = adni10 %>% pull(RID) %>% unique %>% length,
+            K = 4,
+            tot_obs = nrow(adni10),
+            patient_idx = adni10 %>% pull(RID) %>% as.factor %>% as.integer,
+            biomarker_idx = adni10 %>% pull(BIOMARKER) %>% as.factor %>% as.integer,
+            age = adni10 %>% pull(AGE) %>% (function(x) x - mean(x)),
+            y = adni10 %>% pull(VALUE))
+
+linear_progression_fit <- stan("linear_progression.stan", data = dat, chains = 1, iter = 2000)
+
+linear_progression_fit %>% print(pars = c("a_abeta", "a_hippo", "a_tau", "d_abeta", "d_hippo", "d_tau", "b_hippo", "b_mmse", "b_tau", "c_hippo", "c_mmse", "c_tau", "sigma_abeta", "sigma_hippo", "sigma_mmse", "sigma_tau", "gamma", "alpha", "beta"))
+```
+
+
+
+
 # I-Splines
 
-# Modeling Disease Progression with I-Splines
+# Modeling AD Progression with I-Splines
+
+# References
